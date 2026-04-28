@@ -67,6 +67,7 @@ h2 {
 
 .temp-high { color: #ff6b6b; }
 .temp-normal { color: #4cd137; }
+.offline { color: #ffcc00; }
 </style>
 </head>
 
@@ -105,60 +106,71 @@ h2 {
 
 const BASE_URL = "https://dashboard-zuge.onrender.com";
 
+// SAFE FETCH (prevents freeze)
+async function safeFetch(url) {
+    try {
+        const res = await fetch(url);
+        if (!res.ok) throw new Error("Server error");
+        return await res.json();
+    } catch (err) {
+        console.log("Fetch failed:", url);
+        return null;
+    }
+}
+
 // ROOM 1
 async function loadRoom1() {
-    try {
-        const res = await fetch(`${BASE_URL}/api/room1`);
-        const data = await res.json();
+    const data = await safeFetch(`${BASE_URL}/api/room1`);
 
-        const temp = parseFloat(data.temp) || 0;
-        const tempClass = temp > 40 ? "temp-high" : "temp-normal";
-
-        document.getElementById("temp1").innerHTML =
-            `Temp: <span class="${tempClass}">${temp} °C</span>`;
-
-        document.getElementById("water1").innerText =
-            `Water: ${data.water ?? "N/A"} %`;
-
-        // FOOD (0 = LOW, 1 = HIGH)
-        const foodStatus1 = data.food == 1 ? "HIGH" : "LOW";
-        document.getElementById("food1").innerText =
-            `Food: ${foodStatus1}`;
-
-        document.getElementById("mq137").innerText =
-            `NH₃: ${data.mq137 ?? "N/A"} ppm`;
-
-    } catch (err) {
-        console.log("Room 1 error", err);
+    if (!data) {
+        document.getElementById("temp1").innerHTML = `<span class="offline">OFFLINE</span>`;
+        document.getElementById("water1").innerHTML = `<span class="offline">OFFLINE</span>`;
+        document.getElementById("food1").innerHTML = `<span class="offline">OFFLINE</span>`;
+        document.getElementById("mq137").innerHTML = `<span class="offline">OFFLINE</span>`;
+        return;
     }
+
+    const temp = parseFloat(data.temp) || 0;
+    const tempClass = temp > 40 ? "temp-high" : "temp-normal";
+
+    document.getElementById("temp1").innerHTML =
+        `Temp: <span class="${tempClass}">${temp} °C</span>`;
+
+    document.getElementById("water1").innerText =
+        `Water: ${data.water ?? "N/A"} %`;
+
+    document.getElementById("food1").innerText =
+        `Food: ${data.food == 1 ? "HIGH" : "LOW"}`;
+
+    document.getElementById("mq137").innerText =
+        `NH₃: ${data.mq137 ?? "N/A"} ppm`;
 }
 
 // ROOM 2
 async function loadRoom2() {
-    try {
-        const res = await fetch(`${BASE_URL}/api/room2`);
-        const data = await res.json();
+    const data = await safeFetch(`${BASE_URL}/api/room2`);
 
-        const temp = parseFloat(data.temp) || 0;
-        const tempClass = temp > 40 ? "temp-high" : "temp-normal";
-
-        document.getElementById("temp2").innerHTML =
-            `Temp: <span class="${tempClass}">${temp} °C</span>`;
-
-        document.getElementById("water2").innerText =
-            `Water: ${data.water ?? "N/A"} %`;
-
-        // FOOD (0 = LOW, 1 = HIGH)
-        const foodStatus2 = data.food == 1 ? "HIGH" : "LOW";
-        document.getElementById("food2").innerText =
-            `Food: ${foodStatus2}`;
-
-    } catch (err) {
-        console.log("Room 2 error", err);
+    if (!data) {
+        document.getElementById("temp2").innerHTML = `<span class="offline">OFFLINE</span>`;
+        document.getElementById("water2").innerHTML = `<span class="offline">OFFLINE</span>`;
+        document.getElementById("food2").innerHTML = `<span class="offline">OFFLINE</span>`;
+        return;
     }
+
+    const temp = parseFloat(data.temp) || 0;
+    const tempClass = temp > 40 ? "temp-high" : "temp-normal";
+
+    document.getElementById("temp2").innerHTML =
+        `Temp: <span class="${tempClass}">${temp} °C</span>`;
+
+    document.getElementById("water2").innerText =
+        `Water: ${data.water ?? "N/A"} %`;
+
+    document.getElementById("food2").innerText =
+        `Food: ${data.food == 1 ? "HIGH" : "LOW"}`;
 }
 
-// AUTO REFRESH (UNCHANGED)
+// AUTO REFRESH (kept 3 seconds)
 setInterval(() => {
     loadRoom1();
     loadRoom2();
