@@ -42,11 +42,6 @@ body {
     border-radius: 20px;
     width: 320px;
     box-shadow: 0 0 25px rgba(0,0,0,0.6);
-    transition: transform 0.3s ease;
-}
-
-.card:hover {
-    transform: scale(1.05);
 }
 
 .small-card {
@@ -67,7 +62,6 @@ h2 {
 
 .temp-high { color: #ff6b6b; }
 .temp-normal { color: #4cd137; }
-.offline { color: #ffcc00; }
 </style>
 </head>
 
@@ -106,57 +100,43 @@ h2 {
 
 const BASE_URL = "https://dashboard-zuge.onrender.com";
 
-// SAFE FETCH
-async function safeFetch(url) {
-    try {
-        const res = await fetch(url);
-        if (!res.ok) throw new Error("Server error");
-        return await res.json();
-    } catch (err) {
-        console.log("Fetch failed:", url);
-        return null;
-    }
-}
-
-// MAIN LOAD (ONE API ONLY)
+// SIMPLE FETCH (no OFFLINE logic)
 async function loadData() {
-    const data = await safeFetch(`${BASE_URL}/api/data`);
+    try {
+        const res = await fetch(`${BASE_URL}/api/data`);
+        const data = await res.json();
 
-    if (!data) {
-        document.querySelectorAll(".data").forEach(el => {
-            el.innerHTML = `<span class="offline">OFFLINE</span>`;
-        });
-        return;
+        // ROOM 1
+        document.getElementById("temp1").innerText =
+            `Temp: ${data.room1.temp} °C`;
+
+        document.getElementById("water1").innerText =
+            `Water: ${data.room1.water} %`;
+
+        document.getElementById("food1").innerText =
+            `Food: ${data.room1.food == 1 ? "HIGH" : "LOW"}`;
+
+        // ROOM 2
+        document.getElementById("temp2").innerText =
+            `Temp: ${data.room2.temp} °C`;
+
+        document.getElementById("water2").innerText =
+            `Water: ${data.room2.water} %`;
+
+        document.getElementById("food2").innerText =
+            `Food: ${data.room2.food == 1 ? "HIGH" : "LOW"}`;
+
+        // MQ137
+        document.getElementById("mq137").innerText =
+            `NH₃: ${data.mq137} ppm`;
+
+    } catch (err) {
+        // DO NOTHING → keep "Loading..."
+        console.log("Waiting for server...");
     }
-
-    // ROOM 1
-    const temp1 = parseFloat(data.room1.temp) || 0;
-    document.getElementById("temp1").innerHTML =
-        `Temp: <span class="${temp1 > 40 ? "temp-high" : "temp-normal"}">${temp1} °C</span>`;
-
-    document.getElementById("water1").innerText =
-        `Water: ${data.room1.water} %`;
-
-    document.getElementById("food1").innerText =
-        `Food: ${data.room1.food == 1 ? "HIGH" : "LOW"}`;
-
-    // ROOM 2
-    const temp2 = parseFloat(data.room2.temp) || 0;
-    document.getElementById("temp2").innerHTML =
-        `Temp: <span class="${temp2 > 40 ? "temp-high" : "temp-normal"}">${temp2} °C</span>`;
-
-    document.getElementById("water2").innerText =
-        `Water: ${data.room2.water} %`;
-
-    document.getElementById("food2").innerText =
-        `Food: ${data.room2.food == 1 ? "HIGH" : "LOW"}`;
-
-    // MQ137
-    document.getElementById("mq137").innerText =
-        `NH₃: ${data.mq137} ppm`;
 }
 
-// AUTO REFRESH (3 seconds)
+// refresh every 3 seconds
 setInterval(loadData, 3000);
 loadData();
 
