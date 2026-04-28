@@ -104,9 +104,9 @@ h2 {
 
 <script>
 
-const BASE_URL = "https://dashboard-zuge.onrender.com/api/data";
+const BASE_URL = "https://dashboard-zuge.onrender.com";
 
-// SAFE FETCH (prevents freeze)
+// SAFE FETCH
 async function safeFetch(url) {
     try {
         const res = await fetch(url);
@@ -118,66 +118,47 @@ async function safeFetch(url) {
     }
 }
 
-// ROOM 1
-async function loadRoom1() {
-    const data = await safeFetch(`${BASE_URL}/api/room1`);
+// MAIN LOAD (ONE API ONLY)
+async function loadData() {
+    const data = await safeFetch(`${BASE_URL}/api/data`);
 
     if (!data) {
-        document.getElementById("temp1").innerHTML = `<span class="offline">OFFLINE</span>`;
-        document.getElementById("water1").innerHTML = `<span class="offline">OFFLINE</span>`;
-        document.getElementById("food1").innerHTML = `<span class="offline">OFFLINE</span>`;
-        document.getElementById("mq137").innerHTML = `<span class="offline">OFFLINE</span>`;
+        document.querySelectorAll(".data").forEach(el => {
+            el.innerHTML = `<span class="offline">OFFLINE</span>`;
+        });
         return;
     }
 
-    const temp = parseFloat(data.temp) || 0;
-    const tempClass = temp > 40 ? "temp-high" : "temp-normal";
-
+    // ROOM 1
+    const temp1 = parseFloat(data.room1.temp) || 0;
     document.getElementById("temp1").innerHTML =
-        `Temp: <span class="${tempClass}">${temp} °C</span>`;
+        `Temp: <span class="${temp1 > 40 ? "temp-high" : "temp-normal"}">${temp1} °C</span>`;
 
     document.getElementById("water1").innerText =
-        `Water: ${data.water ?? "N/A"} %`;
+        `Water: ${data.room1.water} %`;
 
     document.getElementById("food1").innerText =
-        `Food: ${data.food == 1 ? "HIGH" : "LOW"}`;
+        `Food: ${data.room1.food == 1 ? "HIGH" : "LOW"}`;
 
-    document.getElementById("mq137").innerText =
-        `NH₃: ${data.mq137 ?? "N/A"} ppm`;
-}
-
-// ROOM 2
-async function loadRoom2() {
-    const data = await safeFetch(`${BASE_URL}/api/room2`);
-
-    if (!data) {
-        document.getElementById("temp2").innerHTML = `<span class="offline">OFFLINE</span>`;
-        document.getElementById("water2").innerHTML = `<span class="offline">OFFLINE</span>`;
-        document.getElementById("food2").innerHTML = `<span class="offline">OFFLINE</span>`;
-        return;
-    }
-
-    const temp = parseFloat(data.temp) || 0;
-    const tempClass = temp > 40 ? "temp-high" : "temp-normal";
-
+    // ROOM 2
+    const temp2 = parseFloat(data.room2.temp) || 0;
     document.getElementById("temp2").innerHTML =
-        `Temp: <span class="${tempClass}">${temp} °C</span>`;
+        `Temp: <span class="${temp2 > 40 ? "temp-high" : "temp-normal"}">${temp2} °C</span>`;
 
     document.getElementById("water2").innerText =
-        `Water: ${data.water ?? "N/A"} %`;
+        `Water: ${data.room2.water} %`;
 
     document.getElementById("food2").innerText =
-        `Food: ${data.food == 1 ? "HIGH" : "LOW"}`;
+        `Food: ${data.room2.food == 1 ? "HIGH" : "LOW"}`;
+
+    // MQ137
+    document.getElementById("mq137").innerText =
+        `NH₃: ${data.mq137} ppm`;
 }
 
-// AUTO REFRESH (kept 3 seconds)
-setInterval(() => {
-    loadRoom1();
-    loadRoom2();
-}, 3000);
-
-loadRoom1();
-loadRoom2();
+// AUTO REFRESH (3 seconds)
+setInterval(loadData, 3000);
+loadData();
 
 </script>
 
