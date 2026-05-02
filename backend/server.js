@@ -1,14 +1,19 @@
+require("dotenv").config();
+
 const express = require("express");
 const cors = require("cors");
 const fetch = require("node-fetch");
 
 const app = express();
 
-// ✅ Enable CORS (this fixes browser blocking)
+// CORS (you can restrict this later if needed)
 app.use(cors());
 
 const TOKEN = process.env.BLYNK_TOKEN;
 
+// =======================
+// GET ALL SENSOR DATA
+// =======================
 app.get("/api/data", async (req, res) => {
   try {
     const values = await Promise.all([
@@ -19,6 +24,9 @@ app.get("/api/data", async (req, res) => {
       fetch(`https://blynk.cloud/external/api/get?token=${TOKEN}&V4`).then(r => r.text()),
       fetch(`https://blynk.cloud/external/api/get?token=${TOKEN}&V5`).then(r => r.text()),
       fetch(`https://blynk.cloud/external/api/get?token=${TOKEN}&V6`)
+        .then(r => r.text())
+        .catch(() => "0"),
+      fetch(`https://blynk.cloud/external/api/get?token=${TOKEN}&V10`)
         .then(r => r.text())
         .catch(() => "0")
     ]);
@@ -34,14 +42,40 @@ app.get("/api/data", async (req, res) => {
         water: values[4],
         food: values[5]
       },
-      mq137: values[6]
+      mq137: values[6],
+      v10: values[7] // LED state
     });
 
   } catch (err) {
-    console.error(err); // ✅ helpful for debugging
-    res.status(500).json({ error: "failed" });
+    console.error("DATA ERROR:", err);
+    res.status(500).json({ error: "failed to fetch data" });
   }
 });
+
+// =======================
+// TOGGLE V6 (BUTTON)
+// =======================
+app.get("/api/toggleV6", async (req, res) => {
+  try {
+    const value = req.query.value;
+
+    if (value !== "0" && value !== "1") {
+      return res.status(400).json({ error: "invalid value" });
+    }
+
+    await fetch(
+      `https://blynk.cloud/external/api/update?token=${TOKEN}&V6=${value}`
+    );
+
+    res.json({ success: true, value });
+
+  } catch (err) {
+    console.error("TOGGLE ERROR:", err);
+    res.status(500).json({ error: "toggle failed" });
+  }
+});
+
+
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
