@@ -1,31 +1,33 @@
-require("dotenv").config();
-
 const express = require("express");
 const cors = require("cors");
 
 const app = express();
-app.use(cors());
+
+app.use(cors({
+  origin: "https://inpurrnest.github.io",
+  methods: ["GET", "POST"]
+}));
 
 const TOKEN = process.env.BLYNK_TOKEN;
 
-// SAFETY CHECK (prevents crash)
 if (!TOKEN) {
   console.error("BLYNK_TOKEN is missing!");
   process.exit(1);
 }
 
+// ROOT CHECK
+app.get("/", (req, res) => {
+  res.send("API running");
+});
+
 app.get("/api/data", async (req, res) => {
   try {
-    const values = await Promise.all([
-      fetch(`https://blynk.cloud/external/api/get?token=${TOKEN}&V0`).then(r => r.text()),
-      fetch(`https://blynk.cloud/external/api/get?token=${TOKEN}&V1`).then(r => r.text()),
-      fetch(`https://blynk.cloud/external/api/get?token=${TOKEN}&V2`).then(r => r.text()),
-      fetch(`https://blynk.cloud/external/api/get?token=${TOKEN}&V3`).then(r => r.text()),
-      fetch(`https://blynk.cloud/external/api/get?token=${TOKEN}&V4`).then(r => r.text()),
-      fetch(`https://blynk.cloud/external/api/get?token=${TOKEN}&V5`).then(r => r.text()),
-      fetch(`https://blynk.cloud/external/api/get?token=${TOKEN}&V6`).then(r => r.text()).catch(()=> "0"),
-      fetch(`https://blynk.cloud/external/api/get?token=${TOKEN}&V10`).then(r => r.text()).catch(()=> "0")
-    ]);
+    const urls = ["V0","V1","V2","V3","V4","V5","V6","V10"]
+      .map(v => `https://blynk.cloud/external/api/get?token=${TOKEN}&${v}`);
+
+    const values = await Promise.all(
+      urls.map(u => fetch(u).then(r => r.text()).catch(() => "0"))
+    );
 
     res.json({
       room1: { temp: values[0], water: values[1], food: values[2] },
@@ -40,12 +42,17 @@ app.get("/api/data", async (req, res) => {
   }
 });
 
-// TOGGLE
 app.get("/api/toggleV6", async (req, res) => {
   try {
     const value = req.query.value;
 
-    await fetch(`https://blynk.cloud/external/api/update?token=${TOKEN}&V6=${value}`);
+    if (value !== "0" && value !== "1") {
+      return res.status(400).json({ error: "invalid value" });
+    }
+
+    await fetch(
+      `https://blynk.cloud/external/api/update?token=${TOKEN}&V6=${value}`
+    );
 
     res.json({ success: true });
 
@@ -55,9 +62,13 @@ app.get("/api/toggleV6", async (req, res) => {
   }
 });
 
-app.get("/", (req, res) => {
-  res.send("API running");
+
+app.use((req, res) => {
+  res.status(404).json({ error: "route not found" });
 });
 
+// =======================
+// START SERVER
+// =======================
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log("Server running"));
+app.listen(PORT, () => console.log("Server running on port", PORT));
