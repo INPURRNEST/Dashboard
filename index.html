@@ -50,6 +50,47 @@ body {
     font-size: 14px;
 }
 
+.mq-row {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+.control-panel {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+}
+
+button {
+    padding: 10px 20px;
+    border: none;
+    border-radius: 10px;
+    background: #4da6ff;
+    color: white;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+button:hover {
+    background: #3399ff;
+}
+
+.led {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: #1e3a5f;
+    box-shadow: 0 0 5px #1e3a5f;
+    transition: all 0.3s ease;
+}
+
+.led.on {
+    background: #00aaff;
+    box-shadow: 0 0 15px #00aaff, 0 0 30px #00aaff;
+}
+
 h2 {
     margin-bottom: 15px;
 }
@@ -59,9 +100,6 @@ h2 {
     margin: 10px 0;
     font-weight: bold;
 }
-
-.temp-high { color: #ff6b6b; }
-.temp-normal { color: #4cd137; }
 </style>
 </head>
 
@@ -80,9 +118,19 @@ h2 {
             <div id="food1" class="data">Food: Loading...</div>
         </div>
 
-        <div class="card small-card">
-            <h2>MQ137 Sensor</h2>
-            <div id="mq137" class="data">NH₃: Loading...</div>
+        <!-- MQ + BUTTON + LED -->
+        <div class="mq-row">
+
+            <div class="card small-card">
+                <h2>MQ137 Sensor</h2>
+                <div id="mq137" class="data">NH₃: Loading...</div>
+            </div>
+
+            <div class="control-panel">
+                <button id="btnV6">Toggle</button>
+                <div id="ledV10" class="led"></div>
+            </div>
+
         </div>
 
     </div>
@@ -100,7 +148,9 @@ h2 {
 
 const BASE_URL = "https://dashboard-zuge.onrender.com";
 
-// SIMPLE FETCH (no OFFLINE logic)
+let ledState = 0;
+
+// FETCH DATA
 async function loadData() {
     try {
         const res = await fetch(`${BASE_URL}/api/data`);
@@ -130,13 +180,40 @@ async function loadData() {
         document.getElementById("mq137").innerText =
             `NH₃: ${data.mq137} ppm`;
 
+        // LED STATE
+        updateLED(data.v10);
+
     } catch (err) {
-        // DO NOTHING → keep "Loading..."
         console.log("Waiting for server...");
     }
 }
 
-// refresh every 3 seconds
+// BUTTON → NOW CALLS BACKEND (TOKEN HIDDEN)
+document.getElementById("btnV6").addEventListener("click", async () => {
+    try {
+        ledState = ledState === 1 ? 0 : 1;
+
+        await fetch(`${BASE_URL}/api/toggleV6?value=${ledState}`);
+
+        updateLED(ledState);
+
+    } catch (err) {
+        console.log("Button error:", err);
+    }
+});
+
+// LED VISUAL
+function updateLED(value) {
+    const led = document.getElementById("ledV10");
+
+    if (value == 1) {
+        led.classList.add("on");
+    } else {
+        led.classList.remove("on");
+    }
+}
+
+// AUTO REFRESH
 setInterval(loadData, 3000);
 loadData();
 
